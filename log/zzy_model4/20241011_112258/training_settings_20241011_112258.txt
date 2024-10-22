@@ -1,0 +1,9 @@
+Training started at: 20241011_112258
+Data root: datasets_original
+Learning rate: 0.0005
+Epochs: 400
+Batch size: 4
+Pretrained model: None
+Self model: zzy_model4
+Class weights: None
+2个transform 参量卡点

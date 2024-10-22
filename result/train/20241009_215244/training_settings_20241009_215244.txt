@@ -1,0 +1,8 @@
+Training started at: 20241009_215244
+Data root: dataset_enhance
+Learning rate: 0.0005
+Epochs: 300
+Batch size: 4
+Pretrained model: None
+Self model: zzy_model2
+Class weights: [8, 8, 12, 16]

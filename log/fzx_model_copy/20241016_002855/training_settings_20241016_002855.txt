@@ -1,0 +1,8 @@
+Training started at: 20241016_002855
+Data root: datasets/datasets
+Learning rate: 0.0005
+Epochs: 400
+Batch size: 4
+Pretrained model: Loaded pretrained model from /root/autodl-tmp/standard_project/log/fzx_model_copy/20241014_162027/self_best_model_20241014_162027.pth
+Model: fzx_model_copy
+Class weights: [8.0, 14.0, 10.0, 14.0]

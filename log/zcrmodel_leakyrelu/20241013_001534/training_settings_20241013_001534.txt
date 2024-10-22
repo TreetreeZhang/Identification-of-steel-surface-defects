@@ -1,0 +1,8 @@
+Training started at: 20241013_001534
+Data root: datasets/datasets_original
+Learning rate: 0.0005
+Epochs: 300
+Batch size: 4
+Pretrained model: Pretrained model file not found
+Model: zcrmodel_leakyrelu
+Class weights: [8.0, 8.0, 12.0, 16.0]

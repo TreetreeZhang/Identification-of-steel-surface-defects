@@ -1,0 +1,8 @@
+Training started at: 20241018_203204
+Data root: datasets/datasets_flip_with_gauss
+Learning rate: 0.0005
+Epochs: 300
+Batch size: 4
+Pretrained model: Loaded pretrained model from /root/autodl-tmp/standard_project/log/fzx_model_copy/20241017_114734/self_best_model_20241017_114734.pth
+Model: fzx_model_copy
+Class weights: [8.0, 20.0, 12.0, 16.0]

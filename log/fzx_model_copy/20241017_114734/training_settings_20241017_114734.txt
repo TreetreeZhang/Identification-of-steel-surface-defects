@@ -1,0 +1,8 @@
+Training started at: 20241017_114734
+Data root: datasets/datasets_original_flip
+Learning rate: 0.0005
+Epochs: 400
+Batch size: 4
+Pretrained model: Loaded pretrained model from /root/autodl-tmp/standard_project/FinalModelPth/fzx_model_copy/datasets_original+1+0.8177.pth
+Model: fzx_model_copy
+Class weights: [8.0, 16.0, 12.0, 16.0]

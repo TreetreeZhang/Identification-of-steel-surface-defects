@@ -1,0 +1,8 @@
+Training started at: 20241012_000654
+Data root: datasets/datasets_original
+Learning rate: 0.0002
+Epochs: 300
+Batch size: 4
+Pretrained model: Pretrained model file not found
+Model: zzy_model1
+Class weights: [8.0, 8.0, 12.0, 16.0]

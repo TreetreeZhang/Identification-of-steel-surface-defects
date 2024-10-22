@@ -1,0 +1,8 @@
+Training started at: 20241016_183712
+Data root: datasets/datasets_original
+Learning rate: 0.0003
+Epochs: 300
+Batch size: 4
+Pretrained model: Loaded pretrained model from /root/autodl-tmp/standard_project/log/zzy_model3/20241016_100922/self_best_model_20241016_100922.pth
+Model: zzy_model3
+Class weights: [10.0, 30.0, 20.0, 25.0]
