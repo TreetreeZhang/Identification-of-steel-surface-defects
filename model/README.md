@@ -5,3 +5,4 @@ model1 is mainly created by Zhang Zhenyu
 
 # model2.py
 model2 is mainly created by Fang Zixiang
+![img.png](img_model.png)
