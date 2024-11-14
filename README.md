@@ -16,6 +16,9 @@ This repository uses **Unet and its variants** to perform defect recognition and
 
 The data in this repository comes from a dataset created by Professor Song Kechen's team at **Northeastern University**, which includes three types of defects: **patches**, **inclusion**, and **scratches**.
 
+### 技术路线
+1. **模型变迁**:我们的Baseline是Unet，在此基础上又得到了两个不同的Unet变种模型。
+2. **训练方法**：采用LMS损失函数，Admaw优化器进行训练。
 ---
 
 ## ⚙️ Algorithms Implemented
@@ -49,7 +52,7 @@ pip install -r requirements.txt
 
 ---
 
-### 2. Data Preparation
+### 3. Data Preparation
 You can use the provided example datasets (e.g., `mk01.txt`) or prepare your own. Custom data should follow this format:
 
 ```
@@ -72,15 +75,17 @@ datasets/
 
 ---
 
-### 3. Running the Algorithms
+### 4. Running the Algorithms
 
 To run a selected model or specify other hyperparameters., execute the following command:
 
 ```bash
-python main.py --solver GA --datapath ./data/mk01.json
+python main.py --model_name 'Unet' --data_root 'datasets' --lr 0.0005 --epochs 300 --batch_size 4 --class_weights '8,8,12,16'
 ```
 
-Replace `GA` with `SA` or `PSO` depending on the algorithm you want to test. You can also modify **hyperparameters** within the algorithm scripts inside the `methods/` directory.
+Replace `Unet` with `model1` or `model2` depending on the model_name you want to test. 
+Replace `datasets` with `datasets1` or `datasets2` depending on the dataset you want to test.
+You can also modify **hyperparameters** within the algorithm scripts inside the `methods/` directory.
 
 ---
 
