@@ -1,13 +1,22 @@
 import torch
 import numpy as np
 import os
+import sys
 import time
+from os import path
 from PIL import Image
-import cv2  # 用于图像叠加
-from utils.dataloader import Crack
-from utils.tools import *
+from torch.utils.data import Dataset
+from torchvision.transforms import functional as TF
+import torchvision.transforms as transforms
+from torchvision.datasets.utils import list_files
+import sys
+import os
+#
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# from model import self_net  # 导入模型结构
 
-class Predict():
+
+class Predict:
     """
     Predict类，用于加载训练好的模型，并对数据集进行预测和评估。
     """
@@ -21,23 +30,22 @@ class Predict():
         data_root : str, 数据集路径
         device : str, 设备选择
         """
+        if not model_path:
+            raise ValueError("Model path must be provided to load the model.")
+
         self.model_path = model_path
-        self.data_root ='datasets' + data_root
+        self.data_root = data_root
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        # 加载完整的模型
-        if self.model_path:
-            self.net = torch.load(self.model_path, map_location=self.device)
-        else:
-            raise ValueError("Model path must be provided to load the model.")
-        
-        self.net = self.net.to(self.device)
+        # 加载模型权重
+        self.net = self_net().to(self.device)
+        self.net.load_state_dict(torch.load(self.model_path, map_location=self.device))
         self.net.eval()
 
     def evaluate(self, num_classes=4):
         """
         执行模型预测和评估。
-        
+
         参数:
         num_classes : int, 类别数量
         """
@@ -45,78 +53,60 @@ class Predict():
             Crack(self.data_root, 'test'),
             batch_size=1, shuffle=False,
             num_workers=4, pin_memory=True)
-        
+
         # 确保输出文件夹存在
-        os.makedirs('./mask/test_predictions', exist_ok=True)
-        os.makedirs('./mask/test_ground_truths', exist_ok=True)
-        os.makedirs('./mask/baseline_predictions', exist_ok=True)
-
-        os.makedirs('./submission/test_predictions', exist_ok=True)
-        os.makedirs('./submission/test_ground_truths', exist_ok=True)
-        os.makedirs('./submission/baseline_predictions', exist_ok=True)
-
-        os.makedirs('./markadd/test_predictions', exist_ok=True)
-        os.makedirs('./markadd/test_ground_truths', exist_ok=True)
-        os.makedirs('./markadd/baseline_predictions', exist_ok=True)
+        output_dirs = [
+            'c_test_predictions'
+        ]
+        for directory in output_dirs:
+            os.makedirs(directory, exist_ok=True)
 
         with torch.no_grad():
-            pred_time = 0
-            pred_img_num = 0
-            iou = [[], [], []]  # 存储 IOU 数据
 
-            for i, (img, lab) in enumerate(test_loader, start=1):
-                img, lab = img.to(self.device), lab.to(self.device)
-                lab = lab.type(torch.LongTensor)
+            for i, img in enumerate(test_loader, start=1):
+                img = img.to(self.device)
 
                 # 模型预测
-                pred_start_time = time.time()
                 pred = torch.argmax(self.net(img).squeeze(0), dim=0, keepdim=True).cpu().numpy()
-                pred_end_time = time.time()
-                pred_time += (pred_end_time - pred_start_time)
-                pred_img_num += 1
-                lab = lab.cpu().numpy()
+                # 保存预测结果为.npy格式
+                np.save(f'c_test_predictions/c_prediction_{i:06d}.npy', pred)
 
-                # 保存预测结果和ground truth为.npy格式
-                np.save(f'./submission/test_predictions/prediction_{i:06d}.npy', pred)
-                np.save(f'./submission/test_ground_truths/ground_truth_{i:06d}.npy', lab)
 
-                # 转换为掩码图像 (灰度，假设是二分类问题)
-                pred_mask = Image.fromarray((pred.squeeze(0) * 255).astype(np.uint8))
-                lab_mask = Image.fromarray((lab.squeeze(0) * 255).astype(np.uint8))
+class Crack(Dataset):
+    def __init__(self, data_root, split_mode):
+        self.data_root = data_root  # data文件
+        self.split_mode = split_mode  # 是训练还是测试
+        if self.split_mode == 'test':
+            self.dataset = CrackPILDataset(data_root=self.data_root)
+        else:
+            raise NotImplementedError('split_mode must be "test"')
 
-                # 计算 IOU
-                iou_pred = compute_iou_with_matrix(pred, lab, num_classes)
-                for j in range(1, num_classes):
-                    if iou_pred[j] >= 0:
-                        iou[1].append(iou_pred[j])
+    def __getitem__(self, index):
+        image = self.dataset[index]
+        image = TF.to_tensor(image)
+        return image
 
-                # 保存掩码图像
-                pred_mask.save(f'./mask/test_predictions/mask_{i:06d}.png')
-                lab_mask.save(f'./mask/test_ground_truths/mask_{i:06d}.png')
+    def __len__(self):
+        return len(self.dataset)
 
-                # 转换图像格式并叠加掩码
-                img_np = img.squeeze(0).cpu().numpy().transpose(1, 2, 0)  # 转换为 HWC 格式
-                img_np = (img_np * 255).astype(np.uint8)
 
-                pred_overlay = maskadd(img_np, pred.squeeze(0), alpha=0.2)
-                lab_overlay = maskadd(img_np, lab.squeeze(0), alpha=0.2)
+class CrackPILDataset(Dataset):  # 原始PIL图像的CFD数据集
+    def __init__(self, data_root):
+        self.data_root = path.expanduser(data_root)  # 使用Path对象处理路径
+        self._image_paths = sorted(list_files(self.data_root, suffix='.jpg'))
 
-                # 保存叠加图像
-                cv2.imwrite(f'./markadd/test_predictions/overlay_{i:06d}.png', pred_overlay)
-                cv2.imwrite(f'./markadd/test_ground_truths/overlay_{i:06d}.png', lab_overlay)
+    def __getitem__(self, index):  # 打开图片
+        image = Image.open(os.path.join(self.data_root, self._image_paths[index]), mode='r').convert('RGB')
+        return image
 
-            # 计算平均时间和 IOU
-            average_time_per_image_pred = pred_time / pred_img_num
-            fps_pred = 1 / average_time_per_image_pred
-            print(f'Pred FPS: {fps_pred:.2f}')
+    def __len__(self):
+        return len(self._image_paths)
 
-            ioupred_1 = np.mean(iou[1])
-            miou_pred = np.mean(ioupred_1)
-            print(f'Pred MIOU: {miou_pred}')
 
 if __name__ == "__main__":
-    model_path = '/root/autodl-tmp/garlic-golden-eagle/log/20241008/20241008_221542/model_state_dict.pth'  # 模型路径
-    data_root = './Dataset'  # 数据集路径
+    model_path = 'model.pth'  # 模型路径
+    data_root = 'npy 生成文件材料/datasets_C'  # 数据集路径
+    print(os.path.abspath(data_root))
 
     # 实例化 Predict 类并执行预测
     predictor = Predict(model_path=model_path, data_root=data_root)
