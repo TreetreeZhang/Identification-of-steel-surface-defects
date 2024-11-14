@@ -16,9 +16,7 @@ This repository uses **Unet and its variants** to perform defect recognition and
 
 The data in this repository comes from a dataset created by Professor Song Kechen's team at **Northeastern University**, which includes three types of defects: **patches**, **inclusion**, and **scratches**.
 
-### 技术路线
-1. **模型变迁**:我们的Baseline是Unet，在此基础上又得到了两个不同的Unet变种模型。
-2. **训练方法**：采用LMS损失函数，Admaw优化器进行训练。
+At first, we used the classic Unet for prediction. In the subsequent process, in order to reduce the number of model parameters, we developed two Unet variant models.
 ---
 
 ## ⚙️ Algorithms Implemented
@@ -75,51 +73,51 @@ datasets/
 
 ---
 
-### 4. Running the Algorithms
+### 4. Training the Model
 
-To run a selected model or specify other hyperparameters., execute the following command:
+To train a selected model with specified hyperparameters, execute the following command:
 
 ```bash
-python main.py --model_name 'Unet' --data_root 'datasets' --lr 0.0005 --epochs 300 --batch_size 4 --class_weights '8,8,12,16'
+python main.py --model_name 'Unet' --data_root 'datasets' --lr 0.0005 --epochs 300 --batch_size 4 --class_weights '8,8,12,16' --pretrained_model 'model.pth'
 ```
 
-Replace `Unet` with `model1` or `model2` depending on the model_name you want to test. 
-Replace `datasets` with `datasets1` or `datasets2` depending on the dataset you want to test.
-You can also modify **hyperparameters** within the algorithm scripts inside the `methods/` directory.
+Ensure that you replace:
+- `Unet` with either `model1` or `model2` depending on the model you wish to test.
+- `datasets` with either `datasets1` or `datasets2` depending on the dataset you intend to use for training.
 
+Additionally, you may modify **hyperparameters** within the algorithm scripts located in the `methods/` directory.
+
+#### Parameters:
+- `lr` (Learning Rate): Defines the learning rate for model training.
+- `epochs`: Specifies the number of training epochs.
+- `batch_size`: Defines the batch size for training.
+- `class_weights`: Specifies the class weights for the loss function, where:
+  - `class_weights[0]` corresponds to the background class weight,
+  - `class_weights[1]` corresponds to the **patches** class weight,
+  - `class_weights[2]` corresponds to the **inclusion** class weight, and
+  - `class_weights[3]` corresponds to the **scratches** class weight.
+- `pretrained_model`: Path to the pretrained model weights (e.g., `model.pth`).
+
+---
+
+### 5. Running the Prediction Algorithm
+
+To make predictions using a trained model, execute the following command:
+
+```bash
+python predict.py --model_path 'model.pth' --data_root 'datasets' --num_classes 4
+```
+
+Make sure to replace:
+- `model.pth` with the path to the model you wish to use for prediction (e.g., `model1.pth` or `model2.pth`).
+- `datasets` with either `datasets1` or `datasets2` depending on the dataset you intend to test.
+
+You may also modify **hyperparameters** within the algorithm scripts located in the `methods/` directory.
 ---
 
 ## 📊 Results
 
-Results will be saved to the **`results/`** folder. Each result includes the following:
-- **Makespan** (total completion time)
-- **Machine utilization**
-- **Gantt chart visualization** (optional: for visualizing schedules)
 
----
-
-## 📂 Directory Structure
-
-```
-Metaheuristic-Algorithms-For-JSP-and-FJSP-Problems/
-│
-├── data/                # Sample datasets
-├── methods/             # Algorithm implementations
-├── results/             # Output files
-├── utils/               # Helper functions
-├── main.py              # Entry point for running algorithms
-├── requirements.txt     # Python dependencies
-└── README.md            # Project documentation
-```
-
----
-
-## 🔧 Tuning and Customization
-
-To modify the behavior of each algorithm:
-- **GA**: Adjust mutation and crossover rates.
-- **SA**: Modify the cooling schedule or initial temperature.
-- **PSO**: Tune the inertia weight or cognitive/social parameters.
 
 ---
 
