@@ -1,115 +1,120 @@
 import os
 import random
-import torch
-from tqdm import tqdm  # 导入 tqdm 库
-import torchvision.transforms as transforms
-from PIL import Image
 import numpy as np
+from PIL import Image
+import cv2
+from tqdm import tqdm
 
-
-# 定义增强函数，确保标注文件与图像的同步处理
-def augment_image_and_mask(image, mask, params):
-    augmentations = []
-
-    # 随机选择是否进行翻转
-    if params['flip'] == 1 and random.random() < 0.5:
-        augmentations.append(transforms.RandomHorizontalFlip(p=1))
-
-    # 随机选择旋转角度范围
-    if params['rotation'] == 1 and random.random() < 0.5:
-        augmentations.append(transforms.RandomRotation(degrees=(-30, 30)))  # 使用范围(-30, 30)
-
-    # 随机缩放
-    if params['scale'] == 1 and random.random() < 0.5:
-        scale = random.uniform(1.0, 1.2)
-        augmentations.append(transforms.RandomResizedCrop(size=(image.size[1], image.size[0]), scale=(scale, scale)))
-
-    # 随机平移
-    if params['translate'] == 1 and random.random() < 0.5:
-        translate_x = random.uniform(0, 0.1)
-        translate_y = random.uniform(0, 0.1)
-        augmentations.append(transforms.RandomAffine(degrees=0, translate=(translate_x, translate_y)))
-
-    # 随机添加高斯噪声
-    def add_gaussian_noise(img):
-        img = np.array(img)
-        noise = np.random.normal(0, 25, img.shape).astype(np.uint8)  # 均值为0，标准差为25
-        noisy_img = Image.fromarray(np.clip(img + noise, 0, 255).astype(np.uint8))
-        return noisy_img
-
-    if params['gaussian_noise'] == 1 and random.random() < 0.5:
-        image = add_gaussian_noise(image)
-
-    # 应用增强操作
-    if augmentations:
-        transform = transforms.Compose(augmentations)
-        image = transform(image)
-        mask = transform(mask)  # 对标注文件应用相同的变换
-
-    return image, mask
-
-
-# 创建文件夹
 def ensure_dir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+def load_images_from_folder(folder):
+    images = []
+    for filename in os.listdir(folder):
+        if filename.endswith(".png") or filename.endswith(".jpg") or filename.endswith(".jpeg"):
+            img = Image.open(os.path.join(folder, filename))
+            if img is not None:
+                images.append(img)
+    return images
 
-# 处理图片和相应的标注文件，确保一一对应关系
-def process_image_annotation_pair(image_path, annotation_path, params, augment_times, output_image_folder,
-                                  output_annotation_folder):
-    for i in range(augment_times):
-        # 打开图像和对应的标注文件
-        img = Image.open(image_path)
-        mask = Image.open(annotation_path)
+def crop_images_from_single_image(image, mask, num_parts):
+    # 获取原始图像的宽和高
+    width, height = image.size
 
-        # 对图像和标注文件进行相同的增强操作
-        augmented_img, augmented_mask = augment_image_and_mask(img, mask, params)
+    cropped_image_parts = []
+    cropped_mask_parts = []
 
-        # 确保输出文件夹存在
-        ensure_dir(output_image_folder)
-        ensure_dir(output_annotation_folder)
+    if num_parts == 4:
+        # 对于4个部分，裁剪100x100的区域，起始位置随机
+        crop_width, crop_height = 100, 100
+        for _ in range(num_parts):
+            left = random.randint(0, width - crop_width)
+            top = random.randint(0, height - crop_height)
+            cropped_image_parts.append(image.crop((left, top, left + crop_width, top + crop_height)))
+            cropped_mask_parts.append(mask.crop((left, top, left + crop_width, top + crop_height)))
+    elif num_parts == 3:
+        # 对于3个部分，保持原有逻辑
+        crop_width = width // num_parts
+        for i in range(num_parts):
+            left = i * crop_width
+            right = (i + 1) * crop_width if i != num_parts - 1 else width
+            cropped_image_parts.append(image.crop((left, 0, right, height)))
+            cropped_mask_parts.append(mask.crop((left, 0, right, height)))
+    elif num_parts == 2:
+        # 对于2个部分，裁剪宽度可以随机，起始位置随机
+        random_width = random.randint(width // 4, width // 2)
+        left_1 = random.randint(0, width - random_width)
+        left_2 = random.randint(0, width - random_width)
+        cropped_image_parts.append(image.crop((left_1, 0, left_1 + random_width, height)))
+        cropped_mask_parts.append(mask.crop((left_1, 0, left_1 + random_width, height)))
+        cropped_image_parts.append(image.crop((left_2, 0, left_2 + (width - random_width), height)))
+        cropped_mask_parts.append(mask.crop((left_2, 0, left_2 + (width - random_width), height)))
 
-        # 保存增强后的图像和标注文件
-        img_name = os.path.basename(image_path)
-        mask_name = os.path.basename(annotation_path)
+    stitched_image = blend_images(cropped_image_parts, width, height)
+    stitched_mask = blend_images(cropped_mask_parts, width, height)
+    return stitched_image, stitched_mask
 
-        new_img_name = f"aug_{i}_{img_name}"
-        new_mask_name = f"aug_{i}_{mask_name}"
+def blend_images(parts, width, height):
+    # 使用渐入渐出法对拼接区域进行平滑过渡
+    result = np.zeros((height, width, 3), dtype=np.float32)
+    num_parts = len(parts)
+    overlap_width = 20  # 重叠区域的宽度，用于渐入渐出
 
-        augmented_img.save(os.path.join(output_image_folder, new_img_name))
-        augmented_mask.save(os.path.join(output_annotation_folder, new_mask_name))
+    x_offset = 0
+    for i, part in enumerate(parts):
+        part_np = np.array(part).astype(np.float32)
+        part_width = part_np.shape[1]
 
+        if i > 0:
+            blend_width = min(overlap_width, part_width, result.shape[1] - x_offset)
+            alpha = np.linspace(0, 1, blend_width).reshape(1, -1, 1)
 
-# 处理文件夹中的图片和标注，确保对应
-# 处理文件夹中的图片和标注，确保对应
-def process_folder(image_folder, annotation_folder, params, augment_times, output_image_folder,
-                   output_annotation_folder):
+            result[:, x_offset:x_offset + blend_width] = (
+                result[:, x_offset:x_offset + blend_width] * (1 - alpha) +
+                part_np[:, :blend_width] * alpha
+            )
+            x_offset += blend_width
+
+        result[:, x_offset:x_offset + part_width - overlap_width] = part_np[:, overlap_width:]
+        x_offset += part_width - overlap_width
+
+    result = np.clip(result, 0, 255).astype(np.uint8)
+    return Image.fromarray(result)
+
+def process_folder(image_folder, label_folder, output_image_folder, output_label_folder):
     images = sorted([f for f in os.listdir(image_folder) if f.endswith('.jpg') or f.endswith('.png')])
-    annotations = sorted([f for f in os.listdir(annotation_folder) if f.endswith('.png')])
+    labels = sorted([f for f in os.listdir(label_folder) if f.endswith('.png')])
 
-    assert len(images) == len(annotations), "图像文件和标注文件数量不匹配！"
+    assert len(images) == len(labels), "图像文件和标注文件数量不匹配！"
 
-    # 使用 tqdm 包装 zip(images, annotations) 以显示进度条
-    for img_file, mask_file in tqdm(zip(images, annotations), total=len(images), desc="Processing files"):
+    ensure_dir(output_image_folder)
+    ensure_dir(output_label_folder)
+
+    idx = 0
+    for img_file, label_file in tqdm(zip(images, labels), total=len(images), desc="Processing files"):
         img_path = os.path.join(image_folder, img_file)
-        mask_path = os.path.join(annotation_folder, mask_file)
+        label_path = os.path.join(label_folder, label_file)
 
-        # 对图像和标注文件进行增强处理
-        process_image_annotation_pair(img_path, mask_path, params, augment_times, output_image_folder,
-                                      output_annotation_folder)
+        img = Image.open(img_path)
+        label = Image.open(label_path)
 
+        num_parts = random.choice([2, 3, 4])
+        stitched_image, stitched_label = crop_images_from_single_image(img, label, num_parts)
 
-# 根据用户输入选择处理training、test文件夹还是全部
-def process_dataset(base_path, folder_option, params, augment_times=1, output_base_path=None):
+        stitched_image.save(os.path.join(output_image_folder, f'stitched_{idx}_{num_parts}_images.png'))
+        stitched_label.save(os.path.join(output_label_folder, f'stitched_{idx}_{num_parts}_labels.png'))
+
+        idx += 1
+
+def process_dataset(base_path, folder_option, output_base_path=None):
     if output_base_path is None:
         output_base_path = base_path  # 如果没有指定输出路径，则使用原始路径
 
-    if folder_option == 'training':
+    if folder_option == 'train':
         process_folder(
             os.path.join(base_path, 'train/image'),
             os.path.join(base_path, 'train/label'),
-            params, augment_times,
             os.path.join(output_base_path, 'train/image'),
             os.path.join(output_base_path, 'train/label')
         )
@@ -117,7 +122,6 @@ def process_dataset(base_path, folder_option, params, augment_times=1, output_ba
         process_folder(
             os.path.join(base_path, 'test/image'),
             os.path.join(base_path, 'test/label'),
-            params, augment_times,
             os.path.join(output_base_path, 'test/image'),
             os.path.join(output_base_path, 'test/label')
         )
@@ -125,34 +129,25 @@ def process_dataset(base_path, folder_option, params, augment_times=1, output_ba
         process_folder(
             os.path.join(base_path, 'train/image'),
             os.path.join(base_path, 'train/label'),
-            params, augment_times,
             os.path.join(output_base_path, 'train/image'),
             os.path.join(output_base_path, 'train/label')
         )
         process_folder(
             os.path.join(base_path, 'test/image'),
             os.path.join(base_path, 'test/label'),
-            params, augment_times,
             os.path.join(output_base_path, 'test/image'),
             os.path.join(output_base_path, 'test/label')
         )
     else:
-        print("Invalid folder option! Please use 'training', 'test', or 'all'.")
-if __name__ == '__main__':
+        print("Invalid folder option! Please use 'train', 'test', or 'all'.")
 
-    # 超参数配置，0表示不进行该操作，1表示进行
-    augmentation_params = {
-        'flip': 0,  # 水平翻转
-        'rotation': 0,  # 随机旋转
-        'scale': 0,  # 缩放
-        'translate': 0,  # 平移
-        'gaussian_noise': 1  # 高斯噪声
-    }
+if __name__ == "__main__":
+    dataset_option = 'train'  # 替换为您想要的选项：'train', 'test', 或 'all'
+    base_path = "/root/autodl-tmp/standard_project/datasets/datasets_A"  # 数据集的基本路径
+    output_path = "/root/autodl-tmp/standard_project/datasets/datasets_A_splice"  # 替换为您想要的输出路径
+    ensure_dir(output_path)
 
-    # 示例调用
-    base_dataset_path = '/root/autodl-tmp/standard_project/datasets/datasets_flip'  # 替换为你的数据集路径
-    output_base_path = '/root/autodl-tmp/standard_project/datasets/datasets_flip_with_gauss'  # 替换为你希望保存增强数据的路径，或者使用 None 表示原始文件夹
-    folder_to_process = 'training'  # 可以是 'training'， 'test' 或 'all'
-    augment_times = 1  # 每张图像增强的次数
-    process_dataset(base_dataset_path, folder_to_process, augmentation_params, augment_times, output_base_path)
-    print("数据增强已经完成")
+    process_dataset(base_path, dataset_option, output_path)
+
+
+

@@ -3,8 +3,7 @@ from PIL import Image
 from tqdm import tqdm  # 用于显示处理进度条
 import torchvision.transforms.functional as F
 
-
-# 定义翻转函数，进行固定顺序的垂直和水平翻转
+# 定义翻转函数，进行固定顺序的垂直、水平和对角线翻转
 def flip_image_and_mask(image, mask, flip_type):
     # 根据 flip_type 进行不同的翻转操作
     if flip_type == 'vertical':
@@ -15,11 +14,17 @@ def flip_image_and_mask(image, mask, flip_type):
         # 仅水平翻转
         image = F.hflip(image)
         mask = F.hflip(mask)
-    elif flip_type == 'both':
-        # 同时进行垂直和水平翻转
-        image = F.vflip(F.hflip(image))
-        mask = F.vflip(F.hflip(mask))
-
+    elif flip_type == 'main_diagonal':
+        # 主对角线翻转
+        image = image.transpose(Image.Transpose.TRANSPOSE)
+        mask = mask.transpose(Image.Transpose.TRANSPOSE)
+    elif flip_type == 'secondary_diagonal':
+        # 副对角线翻转
+        image = image.transpose(Image.Transpose.TRANSPOSE)
+        image = F.hflip(image)
+        mask = mask.transpose(Image.Transpose.TRANSPOSE)
+        mask = F.hflip(mask)
+    
     return image, mask
 
 
@@ -41,7 +46,7 @@ def process_image_annotation_pair(image_path, annotation_path, augment_times, ou
     ensure_dir(output_annotation_folder)
 
     # 固定翻转顺序
-    flip_types = ['vertical', 'horizontal', 'both']
+    flip_types = ['vertical', 'horizontal', 'main_diagonal', 'secondary_diagonal']
 
     # 对每种翻转类型进行处理
     for i in range(augment_times):
@@ -76,7 +81,7 @@ def process_folder(image_folder, annotation_folder, augment_times, output_image_
 
 
 # 根据用户输入选择处理 training、test 文件夹还是全部
-def process_dataset(base_path, folder_option, augment_times=3, output_base_path=None):
+def process_dataset(base_path, folder_option, augment_times=4, output_base_path=None):
     if output_base_path is None:
         output_base_path = base_path  # 如果没有指定输出路径，则使用原始路径
 
@@ -118,10 +123,10 @@ def process_dataset(base_path, folder_option, augment_times=3, output_base_path=
 if __name__ == '__main__':
 
     # 示例调用
-    base_dataset_path = '/root/autodl-tmp/standard_project/datasets/datasets_original_flip'  # 替换为你的数据集路径
+    base_dataset_path = '/root/autodl-tmp/standard_project/datasets/datasets_pre_flip'  # 替换为你的数据集路径
     output_base_path = None  # 替换为你希望保存增强数据的路径，或者使用 None 表示原始文件夹
     folder_to_process = 'training'  # 可以是 'training'， 'test' 或 'all'
-    augment_times = 3  # 每张图像增强的次数
+    augment_times = 4  # 每张图像增强的次数
 
     process_dataset(base_dataset_path, folder_to_process, augment_times, output_base_path)
 
