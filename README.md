@@ -16,9 +16,7 @@ This repository uses **Unet and its variants** to perform defect recognition and
 
 The data in this repository comes from a dataset created by Professor Song Kechen's team at **Northeastern University**, which includes three types of defects: **patches**, **inclusion**, and **scratches**.
 
-### 技术路线
-1. **模型变迁**:我们的Baseline是Unet，在此基础上又得到了两个不同的Unet变种模型。
-2. **训练方法**：采用LMS损失函数，Admaw优化器进行训练。
+At first, we used the classic Unet for prediction. In the subsequent process, in order to reduce the number of model parameters, we developed two Unet variant models.
 ---
 
 ## ⚙️ Algorithms Implemented
