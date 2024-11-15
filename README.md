@@ -33,11 +33,13 @@ These algorithms are ideal for **avoiding local minima** and **exploring large s
 You can download the zip file or run the following command:
 
 ```
-git clone 
+git clone https://github.com/TreetreeZhang/Identification-of-steel-surface-defects.git
+cd Identification-of-steel-surface-defects
 ```
 
 
 ### 2. Installation
+
 Ensure Python is installed, then set up the environment:
 
 ```bash
