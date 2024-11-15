@@ -91,35 +91,20 @@ You can also modify **hyperparameters** within the algorithm scripts inside the 
 
 ## 📊 Results
 
-Results will be saved to the **`results/`** folder. Each result includes the following:
-- **Makespan** (total completion time)
-- **Machine utilization**
-- **Gantt chart visualization** (optional: for visualizing schedules)
+
 
 ---
 
 ## 📂 Directory Structure
 
 ```
-Metaheuristic-Algorithms-For-JSP-and-FJSP-Problems/
-│
-├── data/                # Sample datasets
-├── methods/             # Algorithm implementations
-├── results/             # Output files
-├── utils/               # Helper functions
-├── main.py              # Entry point for running algorithms
-├── requirements.txt     # Python dependencies
-└── README.md            # Project documentation
+
 ```
 
 ---
 
 ## 🔧 Tuning and Customization
 
-To modify the behavior of each algorithm:
-- **GA**: Adjust mutation and crossover rates.
-- **SA**: Modify the cooling schedule or initial temperature.
-- **PSO**: Tune the inertia weight or cognitive/social parameters.
 
 ---
 
