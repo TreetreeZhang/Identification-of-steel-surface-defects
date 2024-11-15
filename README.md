@@ -28,8 +28,16 @@ These algorithms are ideal for **avoiding local minima** and **exploring large s
 ---
 
 ## 🚀 Getting Started
+### 1. Clone to a local computer
 
-### 1. Installation
+You can download the zip file or run the following command:
+
+```
+git clone 
+```
+
+
+### 2. Installation
 Ensure Python is installed, then set up the environment:
 
 ```bash
