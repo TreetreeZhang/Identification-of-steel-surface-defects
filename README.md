@@ -116,7 +116,7 @@ You may also modify **hyperparameters** within the algorithm scripts located in 
 ---
 
 ## 📊 Results
-
+The average MIOU we tested ended up being around 83%.
 
 
 ---
