@@ -39,7 +39,7 @@ cd Identification-of-steel-surface-defects
 ```
 
 
-### 2. Installation
+### 2. Prerequisite
 
 Ensure Python is installed, then set up the environment:
 
